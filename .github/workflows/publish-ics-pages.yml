@@ -19,13 +19,6 @@ on:
         description: "Second semester end (YYYY-MM-DD)"
         required: true
         default: "2027-02-05"
-  push:
-    branches: ["main", "master"]
-    paths:
-      - "convert_table_to_ics.py"
-      - "requirements.txt"
-      - "output/tables/table_03.csv"
-      - ".github/workflows/publish-ics-pages.yml"
 
 permissions:
   contents: read
