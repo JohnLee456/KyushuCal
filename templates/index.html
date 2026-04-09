@@ -1,58 +1,258 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>九大课表转 iCloud 日历</title>
+  <title>九大课表转 ICS 日历</title>
   <style>
-    body { font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
-    .wrap { max-width: 760px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-    h1 { margin-top: 0; font-size: 24px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .full { grid-column: 1 / -1; }
-    label { display: block; font-weight: 600; margin: 10px 0 6px; }
-    input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 15px; }
-    button { margin-top: 16px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: #0f766e; color: #fff; font-size: 16px; cursor: pointer; }
-    .err { margin: 10px 0; color: #b91c1c; background: #fee2e2; padding: 10px; border-radius: 10px; }
-    .hint { font-size: 13px; color: #6b7280; margin-top: 10px; }
+    :root {
+      --bg-1: #f7fafc;
+      --bg-2: #ecfeff;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe4ee;
+      --primary: #0f766e;
+      --primary-hover: #0d5d57;
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+      --ok-bg: #ecfeff;
+      --ok-text: #0f766e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 20% 0%, var(--bg-2), var(--bg-1) 52%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 28px 14px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 820px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin: 8px 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: block;
+      margin: 0 0 7px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s ease;
+    }
+
+    input:focus {
+      border-color: #14b8a6;
+    }
+
+    .actions {
+      margin-top: 16px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--primary);
+      cursor: pointer;
+      transition: background-color .15s ease;
+    }
+
+    button:hover { background: var(--primary-hover); }
+    button[disabled] { opacity: 0.65; cursor: not-allowed; }
+
+    .panel {
+      margin-top: 16px;
+      border-radius: 12px;
+      padding: 12px;
+      display: none;
+      line-height: 1.55;
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .panel.error {
+      display: block;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .panel.ok {
+      display: block;
+      background: var(--ok-bg);
+      color: var(--ok-text);
+      border: 1px solid #99f6e4;
+    }
+
+    .link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>九州大学课表转 iCloud 日历</h1>
-    {% if error %}<div class="err">{{ error }}</div>{% endif %}
-    <form method="post" action="/generate">
+  <main class="wrap">
+    <h1>九州大学课表转 ICS 日历</h1>
+    <p class="sub">输入学号与密码，选择两个学期的起止时间，点击后将调用后端 Serverless 生成日历。</p>
+
+    <form id="generate-form">
       <div class="grid">
         <div>
-          <label>SSO-KID</label>
-          <input name="user_id" required value="{{ defaults.get('user_id', '') if defaults else '' }}">
+          <label for="user_id">学号（SSO-KID）</label>
+          <input id="user_id" name="user_id" required value="{{ defaults.get('user_id', '') if defaults else '' }}">
         </div>
         <div>
-          <label>密码</label>
-          <input type="password" name="password" required value="">
-        </div>
-
-        <div>
-          <label>第一学期开始时间</label>
-          <input type="date" name="first_semester_start" required value="{{ defaults.get('first_semester_start', '') if defaults else '' }}">
-        </div>
-        <div>
-          <label>第一学期结束时间</label>
-          <input type="date" name="first_semester_end" required value="{{ defaults.get('first_semester_end', '') if defaults else '' }}">
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" required>
         </div>
 
         <div>
-          <label>第二学期开始时间</label>
-          <input type="date" name="second_semester_start" required value="{{ defaults.get('second_semester_start', '') if defaults else '' }}">
+          <label for="first_semester_start">第一学期开始</label>
+          <input id="first_semester_start" name="first_semester_start" type="date" required value="{{ defaults.get('first_semester_start', '') if defaults else '' }}">
         </div>
         <div>
-          <label>第二学期结束时间</label>
-          <input type="date" name="second_semester_end" required value="{{ defaults.get('second_semester_end', '') if defaults else '' }}">
+          <label for="first_semester_end">第一学期结束</label>
+          <input id="first_semester_end" name="first_semester_end" type="date" required value="{{ defaults.get('first_semester_end', '') if defaults else '' }}">
+        </div>
+
+        <div>
+          <label for="second_semester_start">第二学期开始</label>
+          <input id="second_semester_start" name="second_semester_start" type="date" required value="{{ defaults.get('second_semester_start', '') if defaults else '' }}">
+        </div>
+        <div>
+          <label for="second_semester_end">第二学期结束</label>
+          <input id="second_semester_end" name="second_semester_end" type="date" required value="{{ defaults.get('second_semester_end', '') if defaults else '' }}">
         </div>
       </div>
-      <button type="submit">生成并准备订阅</button>
+
+      <div class="actions">
+        <button id="submit-btn" type="submit">生成 ICS 下载链接</button>
+      </div>
     </form>
-    <p class="hint">提交后会自动抓取课表、生成 ICS 和 JSON。页面会显示订阅按钮。</p>
-  </div>
+
+    <div id="error-panel" class="panel"></div>
+    <div id="ok-panel" class="panel"></div>
+
+    <p class="hint">说明：服务端会抓取课表并生成 ICS，耗时可能几十秒，请耐心等待。</p>
+  </main>
+
+  <script>
+    const form = document.getElementById("generate-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const errorPanel = document.getElementById("error-panel");
+    const okPanel = document.getElementById("ok-panel");
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      submitBtn.textContent = loading ? "正在生成，请稍候..." : "生成 ICS 下载链接";
+    }
+
+    function showError(message) {
+      okPanel.className = "panel";
+      okPanel.style.display = "none";
+      errorPanel.textContent = message;
+      errorPanel.className = "panel error";
+    }
+
+    function showSuccess(data) {
+      errorPanel.className = "panel";
+      errorPanel.style.display = "none";
+
+      okPanel.innerHTML = `
+        <div>生成成功，任务 ID：${data.job_id}，事件数：${data.event_count}</div>
+        <a class="link" href="${data.ics_download_url}" target="_blank" rel="noopener">点击下载 ICS</a>
+        <br>
+        <a class="link" href="${data.ics_webcal_url}" target="_blank" rel="noopener">订阅链接（webcal）</a>
+      `;
+      okPanel.className = "panel ok";
+
+      if (data.result_url) {
+        window.location.href = data.result_url;
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setLoading(true);
+      errorPanel.className = "panel";
+      okPanel.className = "panel";
+      errorPanel.style.display = "none";
+      okPanel.style.display = "none";
+
+      try {
+        const formData = new FormData(form);
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json().catch(() => ({ ok: false, message: "服务返回格式错误" }));
+        if (!response.ok || !data.ok) {
+          showError(data.message || "生成失败，请稍后重试");
+          return;
+        }
+
+        showSuccess(data);
+      } catch (error) {
+        showError("网络异常，请稍后重试");
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
 </body>
 </html>
