@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>九大课表转 iCloud 日历</title>
+  <style>
+    body { font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+    .wrap { max-width: 760px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    h1 { margin-top: 0; font-size: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; font-weight: 600; margin: 10px 0 6px; }
+    input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 15px; }
+    button { margin-top: 16px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: #0f766e; color: #fff; font-size: 16px; cursor: pointer; }
+    .err { margin: 10px 0; color: #b91c1c; background: #fee2e2; padding: 10px; border-radius: 10px; }
+    .hint { font-size: 13px; color: #6b7280; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>九州大学课表转 iCloud 日历</h1>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <form method="post" action="/generate">
+      <div class="grid">
+        <div>
+          <label>SSO-KID</label>
+          <input name="user_id" required value="{{ defaults.get('user_id', '') if defaults else '' }}">
+        </div>
+        <div>
+          <label>密码</label>
+          <input type="password" name="password" required value="">
+        </div>
+
+        <div>
+          <label>第一学期开始时间</label>
+          <input type="date" name="first_semester_start" required value="{{ defaults.get('first_semester_start', '') if defaults else '' }}">
+        </div>
+        <div>
+          <label>第一学期结束时间</label>
+          <input type="date" name="first_semester_end" required value="{{ defaults.get('first_semester_end', '') if defaults else '' }}">
+        </div>
+
+        <div>
+          <label>第二学期开始时间</label>
+          <input type="date" name="second_semester_start" required value="{{ defaults.get('second_semester_start', '') if defaults else '' }}">
+        </div>
+        <div>
+          <label>第二学期结束时间</label>
+          <input type="date" name="second_semester_end" required value="{{ defaults.get('second_semester_end', '') if defaults else '' }}">
+        </div>
+      </div>
+      <button type="submit">生成并准备订阅</button>
+    </form>
+    <p class="hint">提交后会自动抓取课表、生成 ICS 和 JSON。页面会显示订阅按钮。</p>
+  </div>
+</body>
+</html>

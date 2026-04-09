@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>生成完成</title>
+  <style>
+    body { font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+    .wrap { max-width: 760px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    h1 { margin-top: 0; }
+    .meta { color: #374151; margin-bottom: 16px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    a.btn { display: inline-block; padding: 10px 14px; border-radius: 10px; text-decoration: none; color: #fff; background: #0f766e; }
+    a.btn.alt { background: #0369a1; }
+    .box { margin-top: 14px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px; border-radius: 10px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日历生成完成</h1>
+    <div class="meta">任务 ID: {{ job_id }} ｜ 事件数量: {{ event_count }}</div>
+    <div class="row">
+      <a class="btn" href="{{ ics_http_url }}">下载 ICS</a>
+      <a class="btn alt" href="{{ ics_webcal_url }}">订阅日历</a>
+      <a class="btn alt" href="{{ json_url }}">下载 JSON</a>
+    </div>
+    <div class="box">
+      订阅链接（iPhone 可在“添加已订阅的日历”中粘贴）：
+      <div>{{ ics_webcal_url }}</div>
+    </div>
+    <div class="row">
+      <a class="btn alt" href="/">返回重新生成</a>
+    </div>
+  </div>
+</body>
+</html>
