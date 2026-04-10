@@ -6,9 +6,11 @@ import json
 import re
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+import holidays
 
 TZ = ZoneInfo("Asia/Tokyo")
 
@@ -193,6 +195,7 @@ def add_weekly_events(
     course: CourseSlot,
     date_start: datetime,
     date_end: datetime,
+    excluded_dates: set[date] | None = None,
 ) -> int:
     if course.weekday not in WEEKDAY_INDEX:
         return 0
@@ -204,6 +207,9 @@ def add_weekly_events(
     count = 0
     current = first_day
     while current.date() <= date_end.date():
+        if excluded_dates and current.date() in excluded_dates:
+            current += timedelta(days=7)
+            continue
         dt_start = current.replace(hour=start_h, minute=start_m, second=0, microsecond=0, tzinfo=TZ)
         dt_end = current.replace(hour=end_h, minute=end_m, second=0, microsecond=0, tzinfo=TZ)
         events.append(
@@ -221,20 +227,44 @@ def add_weekly_events(
     return count
 
 
+def collect_japan_holiday_dates(date_ranges: list[tuple[datetime, datetime]]) -> set[date]:
+    if not date_ranges:
+        return set()
+
+    start_year = min(start.date().year for start, _ in date_ranges)
+    end_year = max(end.date().year for _, end in date_ranges)
+    jp_holidays = holidays.country_holidays("JP", years=range(start_year, end_year + 1))
+
+    holiday_dates: set[date] = set()
+    for start, end in date_ranges:
+        current = start.date()
+        while current <= end.date():
+            if current in jp_holidays:
+                holiday_dates.add(current)
+            current += timedelta(days=1)
+    return holiday_dates
+
+
 def build_calendar_events(
     courses: list[CourseSlot],
     first_start: datetime,
     first_end: datetime,
     second_start: datetime,
     second_end: datetime,
+    exclude_japan_holidays: bool = True,
 ) -> tuple[list[dict[str, str]], int]:
     events: list[dict[str, str]] = []
     event_count = 0
+    excluded_dates = (
+        collect_japan_holiday_dates([(first_start, first_end), (second_start, second_end)])
+        if exclude_japan_holidays
+        else set()
+    )
     for c in courses:
         if c.term in {"first", "full", "year"}:
-            event_count += add_weekly_events(events, c, first_start, first_end)
+            event_count += add_weekly_events(events, c, first_start, first_end, excluded_dates=excluded_dates)
         if c.term in {"second", "full", "year"}:
-            event_count += add_weekly_events(events, c, second_start, second_end)
+            event_count += add_weekly_events(events, c, second_start, second_end, excluded_dates=excluded_dates)
     return events, event_count
 
 
@@ -294,6 +324,11 @@ def main() -> None:
     parser.add_argument("--first-semester-end", default="2026-08-07")
     parser.add_argument("--second-semester-start", default="2026-10-01")
     parser.add_argument("--second-semester-end", default="2027-02-05")
+    parser.add_argument(
+        "--keep-japan-holidays",
+        action="store_true",
+        help="Keep classes on Japanese public holidays (default behavior removes them).",
+    )
     args = parser.parse_args()
 
     courses = read_table03(Path(args.input_csv))
@@ -315,6 +350,7 @@ def main() -> None:
         first_end=first_end,
         second_start=second_start,
         second_end=second_end,
+        exclude_japan_holidays=not args.keep_japan_holidays,
     )
 
     output_ics = Path(args.output_ics)
