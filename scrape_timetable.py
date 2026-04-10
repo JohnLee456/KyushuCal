@@ -10,6 +10,7 @@ from urllib.parse import urljoin
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from convert_table_to_ics import read_table03, write_json_sample
 
 ENTRY_URL = "https://ku-portal.kyushu-u.ac.jp/campusweb/top.do"
 TIMETABLE_URL = "https://ku-portal.kyushu-u.ac.jp/campusweb/wrsytblu.do"
@@ -288,8 +289,70 @@ def follow_hidden_autopost_chain(
 
 
 def parse_tables_and_save(html: str, output_dir: Path) -> int:
+    def normalize_cell_text(text: str) -> str:
+        return re.sub(r"[ \t\u3000]+", " ", text).strip()
+
+    def build_split_term_cell_map(page_html: str) -> dict[tuple[int, int], tuple[str, str]]:
+        soup = BeautifulSoup(page_html, "lxml")
+        mapping: dict[tuple[int, int], tuple[str, str]] = {}
+        for tr in soup.select("tr.sayuu_bunkatu"):
+            classes = tr.get("class") or []
+            day = None
+            period = None
+
+            for cls in classes:
+                if cls.isdigit():
+                    day = int(cls)
+                    continue
+                m = re.match(r"verticalrule_(\d+)_(\d+)$", cls)
+                if m:
+                    period = int(m.group(1))
+                    if day is None:
+                        day = int(m.group(2))
+
+            if day is None or period is None:
+                continue
+
+            tds = tr.find_all("td", recursive=False)
+            if len(tds) < 3:
+                continue
+            left_text = normalize_cell_text(tds[0].get_text(" ", strip=True))
+            right_text = normalize_cell_text(tds[2].get_text(" ", strip=True))
+            mapping[(period, day)] = (left_text, right_text)
+        return mapping
+
+    def rewrite_table03_with_term_split(df: pd.DataFrame, split_map: dict[tuple[int, int], tuple[str, str]]) -> pd.DataFrame:
+        out = df.copy()
+        for row_idx in range(len(out)):
+            row0 = str(out.iat[row_idx, 0]) if out.shape[1] > 0 else ""
+            m = re.match(r"^\s*(\d+)時限\s*$", row0)
+            if not m:
+                continue
+            period = int(m.group(1))
+
+            for day in range(1, 8):
+                cell_col = 2 + (day - 1) * 2
+                if cell_col >= out.shape[1]:
+                    continue
+                if (period, day) not in split_map:
+                    continue
+
+                left_text, right_text = split_map[(period, day)]
+                if left_text and right_text:
+                    new_text = f"{left_text}  {right_text}"
+                elif left_text:
+                    new_text = f"{left_text} I"
+                elif right_text:
+                    new_text = f"{right_text} II"
+                else:
+                    new_text = ""
+
+                out.iat[row_idx, cell_col] = new_text
+        return out
+
     tables_dir = output_dir / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
+    split_map = build_split_term_cell_map(html)
 
     try:
         tables = pd.read_html(html)
@@ -297,7 +360,18 @@ def parse_tables_and_save(html: str, output_dir: Path) -> int:
         tables = []
 
     for i, table in enumerate(tables, start=1):
+        if i == 3 and split_map:
+            table = rewrite_table03_with_term_split(table, split_map)
         table.to_csv(tables_dir / f"table_{i:02d}.csv", index=False, encoding="utf-8-sig")
+
+    # Debug helper: generate parsed course slots right after table export.
+    table03_path = tables_dir / "table_03.csv"
+    if table03_path.exists():
+        try:
+            courses = read_table03(table03_path)
+            write_json_sample(courses, output_dir / "calendar_events.json")
+        except Exception as exc:
+            print(f"[WARN] Failed to write debug calendar_events.json: {exc}")
 
     return len(tables)
 
@@ -362,6 +436,8 @@ def login_and_fetch_timetable(user_id: str, password: str, output_dir: Path) -> 
     print(f"[OK] Saved page HTML: {html_path}")
     print(f"[OK] Extracted tables: {table_count}")
     print(f"[OK] CSV directory: {output_dir / 'tables'}")
+    if (output_dir / "calendar_events.json").exists():
+        print(f"[OK] Debug JSON: {output_dir / 'calendar_events.json'}")
     print(f"[OK] Debug directory: {debug_dir}")
 
     lower_html = html.lower()

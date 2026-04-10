@@ -97,8 +97,43 @@ def parse_block(block: str, weekday: str, period: int, term: str) -> CourseSlot:
 
 
 def term_for_block(block: str, block_index: int, total_blocks: int) -> str:
-    if YEAR_ROUND_MARK in block:
+    text = normalize_spaces(block)
+    if YEAR_ROUND_MARK in text:
         return "year"
+
+    def has_any(patterns: list[str]) -> bool:
+        return any(re.search(p, text, flags=re.IGNORECASE) for p in patterns)
+
+    # Detect second-term first to avoid "II" being accidentally matched as "I".
+    second_term_patterns = [
+        "\u5f8c\u671f",  # 後期
+        "\u79cb\u5b66\u671f",  # 秋学期
+        "\u51ac\u5b66\u671f",  # 冬学期
+        "\u79cb",  # 秋
+        "\u51ac",  # 冬
+        r"\b(?:Q3|Q4|3Q|4Q)\b",
+        "\u2161",  # Ⅱ
+        r"(?<!I)II(?!I)",
+    ]
+    first_term_patterns = [
+        "\u524d\u671f",  # 前期
+        "\u6625\u5b66\u671f",  # 春学期
+        "\u590f\u5b66\u671f",  # 夏学期
+        "\u6625",  # 春
+        "\u590f",  # 夏
+        r"\b(?:Q1|Q2|1Q|2Q)\b",
+        "\u2160",  # Ⅰ
+        r"(?<!I)I(?!I)",
+    ]
+
+    has_second = has_any(second_term_patterns)
+    has_first = has_any(first_term_patterns)
+    if has_second and not has_first:
+        return "second"
+    if has_first and not has_second:
+        return "first"
+
+    # Fallback: if a single slot has 2 blocks, assume first/second split by order.
     if total_blocks == 1:
         return "full"
     if block_index == 0:

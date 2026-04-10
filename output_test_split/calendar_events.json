@@ -1,0 +1,199 @@
+{
+  "notes": {
+    "term_rule": "same slot with 2 courses -> first=first semester, second=second semester",
+    "weekday_columns": [
+      "月曜日",
+      "火曜日",
+      "水曜日",
+      "木曜日",
+      "金曜日",
+      "土曜日",
+      "日曜日"
+    ],
+    "period_times": {
+      "1": [
+        "08:40",
+        "10:10"
+      ],
+      "2": [
+        "10:30",
+        "12:00"
+      ],
+      "3": [
+        "13:00",
+        "14:30"
+      ],
+      "4": [
+        "14:50",
+        "16:20"
+      ],
+      "5": [
+        "16:40",
+        "18:10"
+      ],
+      "6": [
+        "18:30",
+        "20:00"
+      ],
+      "7": [
+        "20:10",
+        "21:40"
+      ]
+    }
+  },
+  "courses": [
+    {
+      "course_code": "26641108",
+      "course_name": "ｺﾝﾋﾟｭｰﾀｼｽﾃﾑ･ｱｰｷﾃｸﾁｬ特論 井上 弘士",
+      "teacher": "I",
+      "weekday": "月曜日",
+      "period": 1,
+      "term": "first",
+      "raw_text": "26641108 ｺﾝﾋﾟｭｰﾀｼｽﾃﾑ･ｱｰｷﾃｸﾁｬ特論 井上 弘士 I"
+    },
+    {
+      "course_code": "26641175",
+      "course_name": "コンピュータビジョン 川崎 洋",
+      "teacher": "I",
+      "weekday": "水曜日",
+      "period": 1,
+      "term": "first",
+      "raw_text": "26641175 コンピュータビジョン 川崎 洋 I"
+    },
+    {
+      "course_code": "26641130",
+      "course_name": "パターン認識 島田 敬士",
+      "teacher": "II",
+      "weekday": "木曜日",
+      "period": 1,
+      "term": "full",
+      "raw_text": "26641130 パターン認識 島田 敬士 II"
+    },
+    {
+      "course_code": "26641110",
+      "course_name": "プログラム設計論特論 亀井 靖高",
+      "teacher": "II",
+      "weekday": "金曜日",
+      "period": 1,
+      "term": "full",
+      "raw_text": "26641110 プログラム設計論特論 亀井 靖高 II"
+    },
+    {
+      "course_code": "26641108",
+      "course_name": "ｺﾝﾋﾟｭｰﾀｼｽﾃﾑ･ｱｰｷﾃｸﾁｬ特論 井上 弘士",
+      "teacher": "I",
+      "weekday": "月曜日",
+      "period": 2,
+      "term": "first",
+      "raw_text": "26641108 ｺﾝﾋﾟｭｰﾀｼｽﾃﾑ･ｱｰｷﾃｸﾁｬ特論 井上 弘士 I"
+    },
+    {
+      "course_code": "26642128",
+      "course_name": "電気エネルギー環境基礎特論Ⅰ 東川",
+      "teacher": "甲平",
+      "weekday": "火曜日",
+      "period": 2,
+      "term": "first",
+      "raw_text": "26642128 電気エネルギー環境基礎特論Ⅰ 東川 甲平"
+    },
+    {
+      "course_code": "26642129",
+      "course_name": "電気エネルギー環境基礎特論Ⅱ 東川",
+      "teacher": "甲平",
+      "weekday": "火曜日",
+      "period": 2,
+      "term": "second",
+      "raw_text": "26642129 電気エネルギー環境基礎特論Ⅱ 東川 甲平"
+    },
+    {
+      "course_code": "26641175",
+      "course_name": "コンピュータビジョン 川崎 洋",
+      "teacher": "I",
+      "weekday": "水曜日",
+      "period": 2,
+      "term": "first",
+      "raw_text": "26641175 コンピュータビジョン 川崎 洋 I"
+    },
+    {
+      "course_code": "26641130",
+      "course_name": "パターン認識 島田 敬士",
+      "teacher": "II",
+      "weekday": "木曜日",
+      "period": 2,
+      "term": "full",
+      "raw_text": "26641130 パターン認識 島田 敬士 II"
+    },
+    {
+      "course_code": "26641169",
+      "course_name": "グラフ探索アルゴリズムⅠ 美添",
+      "teacher": "一樹",
+      "weekday": "金曜日",
+      "period": 2,
+      "term": "first",
+      "raw_text": "26641169 グラフ探索アルゴリズムⅠ 美添 一樹"
+    },
+    {
+      "course_code": "26641110",
+      "course_name": "プログラム設計論特論 亀井",
+      "teacher": "靖高",
+      "weekday": "金曜日",
+      "period": 2,
+      "term": "second",
+      "raw_text": "26641110 プログラム設計論特論 亀井 靖高"
+    },
+    {
+      "course_code": "26640000",
+      "course_name": "確率・統計特論Ⅰ 畑埜",
+      "teacher": "晃平",
+      "weekday": "月曜日",
+      "period": 4,
+      "term": "first",
+      "raw_text": "26640000 確率・統計特論Ⅰ 畑埜 晃平"
+    },
+    {
+      "course_code": "26640001",
+      "course_name": "確率・統計特論Ⅱ 畑埜",
+      "teacher": "晃平",
+      "weekday": "月曜日",
+      "period": 4,
+      "term": "second",
+      "raw_text": "26640001 確率・統計特論Ⅱ 畑埜 晃平"
+    },
+    {
+      "course_code": "26643308",
+      "course_name": "【通年】情報理工学演習 木實",
+      "teacher": "新一",
+      "weekday": "火曜日",
+      "period": 4,
+      "term": "year",
+      "raw_text": "26643308 【通年】情報理工学演習 木實 新一"
+    },
+    {
+      "course_code": "26641114",
+      "course_name": "アルゴリズムとデータ構造Ⅰ 稲永",
+      "teacher": "俊介",
+      "weekday": "金曜日",
+      "period": 4,
+      "term": "first",
+      "raw_text": "26641114 アルゴリズムとデータ構造Ⅰ 稲永 俊介"
+    },
+    {
+      "course_code": "26641115",
+      "course_name": "アルゴリズムとデータ構造Ⅱ 稲永",
+      "teacher": "俊介",
+      "weekday": "金曜日",
+      "period": 4,
+      "term": "second",
+      "raw_text": "26641115 アルゴリズムとデータ構造Ⅱ 稲永 俊介"
+    },
+    {
+      "course_code": "26643308",
+      "course_name": "【通年】情報理工学演習 木實",
+      "teacher": "新一",
+      "weekday": "火曜日",
+      "period": 5,
+      "term": "year",
+      "raw_text": "26643308 【通年】情報理工学演習 木實 新一"
+    }
+  ]
+}
