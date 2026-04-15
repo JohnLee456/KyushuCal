@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from convert_table_to_ics import read_table03, write_json_sample
 
 ENTRY_URL = "https://ku-portal.kyushu-u.ac.jp/campusweb/top.do"
-TIMETABLE_URL = "https://ku-portal.kyushu-u.ac.jp/campusweb/wrsytblu.do"
+TIMETABLE_URL = "https://ku-portal.kyushu-u.ac.jp/campusweb/prtlmjkr.do?clearAccessData=true&kjnmnNo=112"
 SSO_JA_URL = "https://ku-portal.kyushu-u.ac.jp/eduapi/gknsso/Campusmate_ja"
 OUTPUT_DIR = Path("output")
 CREDENTIALS_PATH = OUTPUT_DIR / "credentials.local.json"
@@ -295,37 +295,52 @@ def parse_tables_and_save(html: str, output_dir: Path) -> int:
     def build_split_term_cell_map(page_html: str) -> dict[tuple[int, int], tuple[str, str]]:
         soup = BeautifulSoup(page_html, "lxml")
         mapping: dict[tuple[int, int], tuple[str, str]] = {}
-        for tr in soup.select("tr.sayuu_bunkatu"):
-            classes = tr.get("class") or []
-            day = None
-            period = None
+        timetable = soup.find("table", class_="jikanwari_table")
+        if timetable is None:
+            return mapping
 
-            for cls in classes:
-                if cls.isdigit():
-                    day = int(cls)
-                    continue
-                m = re.match(r"verticalrule_(\d+)_(\d+)$", cls)
-                if m:
-                    period = int(m.group(1))
-                    if day is None:
-                        day = int(m.group(2))
+        tbodies = timetable.find_all("tbody", recursive=False)
+        body = max(tbodies, key=lambda b: len(b.find_all("tr", recursive=False))) if tbodies else timetable
 
-            if day is None or period is None:
-                continue
-
+        for tr in body.find_all("tr", recursive=False):
             tds = tr.find_all("td", recursive=False)
             if len(tds) < 3:
                 continue
-            left_text = normalize_cell_text(tds[0].get_text(" ", strip=True))
-            right_text = normalize_cell_text(tds[2].get_text(" ", strip=True))
-            mapping[(period, day)] = (left_text, right_text)
+            period_text = normalize_cell_text(tds[0].get_text(" ", strip=True))
+            m = re.match(r"^\s*(\d+)\s*$", period_text)
+            if not m:
+                continue
+            period = int(m.group(1))
+
+            # day=1..6 (Mon..Sat), columns are 2,4,6,8,10,12.
+            for day in range(1, 7):
+                cell_index = day * 2
+                if cell_index >= len(tds):
+                    continue
+                cell = tds[cell_index]
+                inner = cell.find(
+                    "table",
+                    attrs={"style": lambda v: v and "margin: 0px" in v and "border: medium none" in v},
+                )
+                if inner is None:
+                    continue
+                row = inner.find("tr")
+                if row is None:
+                    continue
+                inner_tds = row.find_all("td", recursive=False)
+                if not inner_tds:
+                    continue
+
+                left_text = normalize_cell_text(inner_tds[0].get_text(" ", strip=True)) if len(inner_tds) >= 1 else ""
+                right_text = normalize_cell_text(inner_tds[2].get_text(" ", strip=True)) if len(inner_tds) >= 3 else ""
+                mapping[(period, day)] = (left_text, right_text)
         return mapping
 
-    def rewrite_table03_with_term_split(df: pd.DataFrame, split_map: dict[tuple[int, int], tuple[str, str]]) -> pd.DataFrame:
+    def rewrite_timetable_with_term_split(df: pd.DataFrame, split_map: dict[tuple[int, int], tuple[str, str]]) -> pd.DataFrame:
         out = df.copy()
         for row_idx in range(len(out)):
             row0 = str(out.iat[row_idx, 0]) if out.shape[1] > 0 else ""
-            m = re.match(r"^\s*(\d+)時限\s*$", row0)
+            m = re.match(r"^\s*(\d+)(?:\D+)?\s*$", row0)
             if not m:
                 continue
             period = int(m.group(1))
@@ -360,15 +375,17 @@ def parse_tables_and_save(html: str, output_dir: Path) -> int:
         tables = []
 
     for i, table in enumerate(tables, start=1):
-        if i == 3 and split_map:
-            table = rewrite_table03_with_term_split(table, split_map)
+        if i == 2 and split_map:
+            table = rewrite_timetable_with_term_split(table, split_map)
         table.to_csv(tables_dir / f"table_{i:02d}.csv", index=False, encoding="utf-8-sig")
 
     # Debug helper: generate parsed course slots right after table export.
-    table03_path = tables_dir / "table_03.csv"
-    if table03_path.exists():
+    timetable_csv = tables_dir / "table_02.csv"
+    if not timetable_csv.exists():
+        timetable_csv = tables_dir / "table_03.csv"
+    if timetable_csv.exists():
         try:
-            courses = read_table03(table03_path)
+            courses = read_table03(timetable_csv)
             write_json_sample(courses, output_dir / "calendar_events.json")
         except Exception as exc:
             print(f"[WARN] Failed to write debug calendar_events.json: {exc}")

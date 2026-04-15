@@ -22,6 +22,14 @@ JOBS_DIR = Path("/tmp/output/jobs") if os.getenv("VERCEL") else Path("output/job
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def find_timetable_csv(tables_dir: Path) -> Path:
+    preferred = [tables_dir / "table_02.csv", tables_dir / "table_03.csv"]
+    for path in preferred:
+        if path.exists():
+            return path
+    raise RuntimeError("未找到 table_02.csv / table_03.csv，请检查抓取结果。")
+
+
 def parse_form_dates(
     first_semester_start: str,
     first_semester_end: str,
@@ -62,11 +70,8 @@ def generate_job(
 
     login_and_fetch_timetable(user_id, password, job_dir)
 
-    table03 = job_dir / "tables" / "table_03.csv"
-    if not table03.exists():
-        raise RuntimeError("未找到 table_03.csv，请检查抓取结果。")
-
-    courses = read_table03(table03)
+    timetable_csv = find_timetable_csv(job_dir / "tables")
+    courses = read_table03(timetable_csv)
     write_json_sample(courses, job_dir / "calendar_events.json")
     events, event_count = build_calendar_events(
         courses,

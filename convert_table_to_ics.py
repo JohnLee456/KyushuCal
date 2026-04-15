@@ -25,7 +25,7 @@ SUNDAY = "\u65e5\u66dc\u65e5"
 WEEKDAYS = [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
 WEEKDAY_INDEX = {MONDAY: 0, TUESDAY: 1, WEDNESDAY: 2, THURSDAY: 3, FRIDAY: 4, SATURDAY: 5, SUNDAY: 6}
 
-PERIOD_LABEL_RE = re.compile(r"^\s*(\d+)\u6642\u9650\s*$")
+PERIOD_LABEL_RE = re.compile(r"^\s*(\d+)(?:\u6642\u9650)?\s*$")
 YEAR_ROUND_MARK = "\u901a\u5e74"
 COURSE_CODE_RE = re.compile(r"\d{8}")
 
@@ -57,12 +57,29 @@ def normalize_spaces(text: str) -> str:
 
 
 def split_course_blocks(cell_text: str) -> list[str]:
-    text = normalize_spaces(cell_text)
+    raw = str(cell_text or "").replace("\u3000", " ")
+    text = raw.strip()
     if not text:
         return []
+
+    # table_03 style: course code starts each block.
     matches = list(COURSE_CODE_RE.finditer(text))
     if not matches:
-        return []
+        # table_02 style: "course _ teacher", possibly repeated in one cell.
+        if "_" in text:
+            pattern = re.compile(
+                r"\s*(?P<name>[^_]+?)\s*_\s*(?P<teacher>[^_]+?)(?=(?:\s{2,}[^_]+?_\s*)|$)"
+            )
+            blocks = []
+            for m in pattern.finditer(text):
+                name = normalize_spaces(m.group("name"))
+                teacher = normalize_spaces(m.group("teacher"))
+                if name:
+                    blocks.append(f"{name} _ {teacher}".strip())
+            if blocks:
+                return blocks
+        # Single free-form block fallback.
+        return [normalize_spaces(text)] if normalize_spaces(text) else []
 
     blocks: list[str] = []
     for i, m in enumerate(matches):
@@ -76,17 +93,31 @@ def split_course_blocks(cell_text: str) -> list[str]:
 
 def parse_block(block: str, weekday: str, period: int, term: str) -> CourseSlot:
     m = COURSE_CODE_RE.match(block)
-    if not m:
-        raise ValueError(f"Invalid course block: {block}")
-    code = m.group(0)
-    rest = normalize_spaces(block[m.end() :])
-    parts = rest.split(" ") if rest else []
-    if len(parts) >= 2:
-        teacher = parts[-1]
-        course_name = " ".join(parts[:-1]).strip()
+    if m:
+        code = m.group(0)
+        rest = normalize_spaces(block[m.end() :])
+        parts = rest.split(" ") if rest else []
+        if len(parts) >= 2:
+            teacher = parts[-1]
+            course_name = " ".join(parts[:-1]).strip()
+        else:
+            teacher = ""
+            course_name = rest
     else:
-        teacher = ""
-        course_name = rest
+        code = ""
+        norm = normalize_spaces(block)
+        if "_" in norm:
+            name_part, teacher_part = norm.split("_", 1)
+            course_name = normalize_spaces(name_part)
+            teacher = normalize_spaces(teacher_part)
+        else:
+            parts = norm.split(" ")
+            if len(parts) >= 2:
+                teacher = parts[-1]
+                course_name = " ".join(parts[:-1]).strip()
+            else:
+                teacher = ""
+                course_name = norm
     return CourseSlot(
         course_code=code,
         course_name=course_name,
@@ -108,23 +139,23 @@ def term_for_block(block: str, block_index: int, total_blocks: int) -> str:
 
     # Detect second-term first to avoid "II" being accidentally matched as "I".
     second_term_patterns = [
-        "\u5f8c\u671f",  # 後期
-        "\u79cb\u5b66\u671f",  # 秋学期
-        "\u51ac\u5b66\u671f",  # 冬学期
-        "\u79cb",  # 秋
-        "\u51ac",  # 冬
+        "後期",
+        "秋学期",
+        "冬学期",
+        "秋",
+        "冬",
         r"\b(?:Q3|Q4|3Q|4Q)\b",
-        "\u2161",  # Ⅱ
+        "Ⅱ",
         r"(?<!I)II(?!I)",
     ]
     first_term_patterns = [
-        "\u524d\u671f",  # 前期
-        "\u6625\u5b66\u671f",  # 春学期
-        "\u590f\u5b66\u671f",  # 夏学期
-        "\u6625",  # 春
-        "\u590f",  # 夏
+        "前期",
+        "春学期",
+        "夏学期",
+        "春",
+        "夏",
         r"\b(?:Q1|Q2|1Q|2Q)\b",
-        "\u2160",  # Ⅰ
+        "Ⅰ",
         r"(?<!I)I(?!I)",
     ]
 
@@ -143,8 +174,6 @@ def term_for_block(block: str, block_index: int, total_blocks: int) -> str:
     if block_index == 1:
         return "second"
     return f"extra_{block_index + 1}"
-
-
 def read_table03(path: Path) -> list[CourseSlot]:
     rows: list[list[str]] = []
     with path.open("r", encoding="utf-8-sig", newline="") as f:
@@ -316,8 +345,8 @@ def write_json_sample(courses: list[CourseSlot], json_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convert Kyushu table_03.csv to JSON + iCloud-importable ICS.")
-    parser.add_argument("--input-csv", default="output/tables/table_03.csv")
+    parser = argparse.ArgumentParser(description="Convert Kyushu timetable CSV to JSON + iCloud-importable ICS.")
+    parser.add_argument("--input-csv", default="output/tables/table_02.csv")
     parser.add_argument("--output-json", default="output/calendar_events.json")
     parser.add_argument("--output-ics", default="output/kyushu_timetable.ics")
     parser.add_argument("--first-semester-start", default="2026-04-13")
